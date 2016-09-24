@@ -5,7 +5,7 @@
   "main": "client/index.html",
   "scripts": {
     "test": "echo 'Error: no test specified'",
-    "start": "open client/index.html"
+    "start": "node client/index.js"
   },
   "license": "Copyright 2015, Hack Reactor. All rights reserved.",
   "bugs": {
@@ -13,6 +13,7 @@
   },
   "homepage": "https://github.com/reactorcore/sprint.watchout",
   "dependencies": {
-    "d3-drag": "^1.0.1"
+    "d3-drag": "^1.0.1",
+    "express": "^4.14.0"
   }
 }
