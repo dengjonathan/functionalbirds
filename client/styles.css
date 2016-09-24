@@ -39,4 +39,10 @@ iframe {
   font-size: 25px;
   float: right;
 }
+
+.active {
+  stroke: #000;
+  stroke-width: 2px;
+}
+
 /* END SOLUTION */
