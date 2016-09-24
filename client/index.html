@@ -10,18 +10,23 @@
 
 <body>
   <div class='container-fluid #background'>
-    <div class="scoreboard jumbletron row col-md-8 col-md-offset-2">
+    <div class="scoreboard jumbletron row col-xs-8 col-md-offset-2">
       <h3 class='title text-center'><font size='24' face="chewy" color="blue">Angry Birds vs Pig</font></h3>
       <div class="highscore"><strong>High score: </strong><span id='high-score'>0</span></div>
       <div class="current"><strong>Current score: </strong><span id='current-score'>0</span></div>
       <div class="collisions"><strong>Collisions: </strong><span id='collision-num'>0</span></div>
+      <button type="button" class="btn btn-success start text-center btn-large difficulty">Start/Stop</button>
+
       <button type="button" class="btn btn-primary hard text-center difficulty">hard</button>
       <button type="button" class="btn btn-default background pull-right">change background</button>
     </div>
+
     <div class='row text-center'><audio src="angry_birds_seasons.mp3" controls loop></audio></div>
-    <div class="board container col-md-8 col-md-offset-1 text-center">
+
     </div>
-  </div>
+    <div class="board container col-xs-8 col-xs-offset-2 text-center">
+    </div>
+
 
   <script src="lib/d3.js" charset="utf-8"></script>
   <script src="https://d3js.org/d3-dispatch.v1.min.js"></script>
