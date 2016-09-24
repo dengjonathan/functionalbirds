@@ -8,18 +8,21 @@ body {
   font-family: helvetica;
   position: relative;
 }
+#background {
+  background-image:url('images/Light-Wood-Background.jpg');
+}
+
 iframe {
   position: absolute;
   z-index: 1;
 }
+
+.title {
+  font-family: 'Chewy', cursive;
+}
 .mouse {
   position: absolute;
   background-color: orange;
-}
-.astroid {
-  background-image: url('asteroid.png');
-  background-size: 100% 100%;
-  position: absolute;
 }
 .vis {
   background-color: black;
@@ -38,6 +41,9 @@ iframe {
   line-height: 33px;
   font-size: 25px;
   float: right;
+}
+.board {
+  margin-top: 5px;
 }
 
 .active {
