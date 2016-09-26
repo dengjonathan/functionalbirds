@@ -1,251 +1,282 @@
-const state = {
-  width: 900,
-  height: 600,
-  iconWidth: 50,
-  iconHeight: 50,
-  aspect: width / height,
-  nodeNum: 25,
-  collisions: 0,
-  currentScore: 0,
-  highScore: 0,
-  speed: 25,
-  interval: 500,
-  images: ['blue', 'green', 'red', 'RED_THINKING_AWESOMENESS', 'Surprised_Chuck', 'white', 'yellow'],
-  backgroundNum: 2,
-  difficulty: 'easy',
-  timeouts: [],
-  status: 'stop',
-  nodes: null
-};
+(function () {
 
+  'use strict';
 
-/*****************************DATA OBJECTS************************************/
-
-const randomInt = (end, st = 0) => (Math.floor(Math.random() * (end - st)) + st);
-
-const posOrNeg = _ => randomInt(-1, 1);
-//TODO: verify if this works?
-
-const randomFromArr = arr => arr[randomInt(arr.length)];
-
-const createANode = (width, height, image, stepSize) => {
-  return {
-    x: Math.random() * width,
-    y: Math.random() * height,
-    xD: switchDirection(),
-    yD: switchDirection(),
-    img: randomFromArr(images),
-    step: stepSize
+  window.state = {
+    width: 900,
+    height: 600,
+    iconWidth: 50,
+    iconHeight: 50,
+    get aspect() {
+      return this.width / this.height;
+    },
+    stepSize: 3,
+    numOfEnemies: 25,
+    collisions: 0,
+    currentScore: 0,
+    highScore: 0,
+    speed: 25,
+    interval: 500,
+    images: ['blue', 'green', 'red', 'RED_THINKING_AWESOMENESS', 'Surprised_Chuck', 'white', 'yellow'],
+    playerImage: '',
+    backgroundNum: 1,
+    difficulty: 'easy',
+    timeouts: [],
+    status: 'stop',
+    enemyData: null,
+    playerData: null,
+    // d3 selected DOM nodes
+    enemies: null,
+    outerBackground: null,
+    board: null,
+    player: null,
   };
-}
 
-const createNodes = (num, width, height, images, stepSize) => {
-  d3.range(num).map(() => {
-    let image = randomFromArr(images);
-    return createANode(width, height, image, stepSize);
-  });
-};
+  const state = window.state;
 
-/*****************************GEN SVG GAME BOARD************************************/
-const genOuterBackground = (color) => {
-  d3.select('body')
-    .style('background-color', '#9CFFFA')
-};
+  /****************************DATA OBJECTS************************************/
 
-const genBoard = (width, height, color, backgroundImg) => {
-  d3.select('.board').append('svg')
-    .attr('width', width)
-    .attr('height', height)
-    .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr('viewBox', '0 0 900 600')
-    .style('border', '1px solid black')
-    .style('background-color', 'lightblue')
-    .style('background-image', 'url("images/background2.png")')
-    .style('background-size', 'cover')
-    .classed('svg-content-responsive', true);
-};
+  const randomInt = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-//takes svg as an argument
-const makeResponsive = (element) => {
-  d3.select(window)
-    .on("resize", () => {
-      let targetWidth = element.node().getBoundingClientRect().width;
-      svg.attr("width", targetWidth);
-      svg.attr("height", targetWidth / aspect);
-    });
-};
+  const posOrNeg = _ => Math.random() > 0.5 ? -1 : 1;
 
-/*****************************Creating Enemies/ Player*********************************/
+  const randomFromArr = arr => arr[randomInt(0, arr.length)];
 
-const genEnemies = (svgElement, data, iconWidth, iconHeight) => {
-  return svgElement.selectAll('circle') //TODO: is there any reason to select all 'circles' when we just change to a svg:image?
-    .data(data)
-    .enter()
-    .append('svg:image')
-    .attr('xlink:href', d => d.img)
-    .attr('x', d => d.x)
-    .attr('y', d => d.y)
-    .attr('width', iconWidth)
-    .attr('height', iconHeight);
-};
-
-// the following 3 functions are for player mousedrag movement
-const dragstarted = function () {
-  d3.select(this).raise().classed('active', true);
-};
-
-const dragged = function () {
-  d3.select(this).attr('x', d.x = d3.event.x).attr('y', d.y = d3.event.y);
-};
-
-const dragended = function () {
-  d3.select(this).classed('active', false);
-};
-
-const genPlayer = (svgElement, data, iconWidth, iconHeight) => {
-  return svgElement.append('svg:image')
-    .data(data)
-    // make this use your new helper functions
-    .attr('xlink:href', 'images/pig.png')
-    .attr('width', iconWidth)
-    .attr('height', iconHeight)
-    .attr('x', d => d.x)
-    .attr('y', d => d.y);
-};
-
-const actionizePlayer = (playerSelector, startFn, dragFn, endFn) => {
-  return playerSelector.call(
-    d3.drag()
-    .on('start', startFn)
-    .on('drag', dragFn)
-    .on('end', endFn));
-};
-
-/*****************************ENEMY MOVEMENT************************************/
-
-const update = data => {
-  return data.map(e => {
-    let node = {
-
+  const createANode = (width, height, image, stepSize) => {
+    return {
+      x: Math.random() * width,
+      y: Math.random() * height,
+      xD: posOrNeg(),
+      yD: posOrNeg(),
+      img: `images/${image}`,
+      step: stepSize
     };
+  };
 
-    if (e.x > width || e.x < 0) {
-      e.xD *= -1;
-    }
-    e.x += e.step * e.xD;
-    if (e.y > height || e.y < 0) {
-      e.yD *= -1;
-    }
-    e.y += e.step * e.yD;
-    e.step = 3; //TODO: find someway to set back to default step size
-  });
-};
-
-const collide = data => {
-  var playerBox = player.node().getBBox();
-  var playerLeft = playerBox.x;
-  var playerRight = playerBox.x + playerBox.width - 25;
-  var playerTop = playerBox.y;
-  var playerBottom = playerBox.y + playerBox.height - 25;
-  var collided = false;
-
-  data.forEach(function (enemy) {
-    var enemyLeft = enemy.x - 7;
-    var enemyRight = enemy.x + 25;
-    var enemyTop = enemy.y - 7;
-    var enemyBottom = enemy.y + 25;
-    var horiCollision = playerLeft < enemyRight && playerRight > enemyLeft;
-    var verCollision = playerTop < enemyBottom && playerBottom > enemyTop;
-
-    if (horiCollision && verCollision) {
-      enemy.xD *= -1; //causes the enemy to turn on collision with player
-      enemy.yD *= -1;
-      enemy.step += 25;
-      update(nodes);
-      collisions++;
-      collided = true;
-      d3.select('#collision-num').text(collisions);
-      d3.select('body')
-        .style('background-color', 'red');
-      currentScore = 0; // TODO: is there better way to reset the score?
-      timeouts.push(setTimeout(function () {
-        d3.select('body')
-          .style('background-color', '#9CFFFA')
-      }, 10));
-    }
-  });
-
-  if (collided) {
-    timeouts.push(setTimeout(collide.bind(null, nodes), 4 * speed));
-  } else {
-    timeouts.push(setTimeout(collide.bind(null, nodes), speed));
-  }
-};
-
-var move = function () {
-  update(nodes);
-  enemies.data(nodes)
-    .attr('x', function (d) {
-      return d.x
-    })
-    .attr('y', function (d) {
-      return d.y
+  const createNodes = (num, width, height, images, stepSize) => {
+    return d3.range(num).map(() => {
+      return createANode(width, height, randomFromArr(images), stepSize);
     });
-  timeouts.push(setTimeout(move, speed));
-};
+  };
 
-/*****************************GAME MECHANICS************************************/
+  /**********************GEN SVG GAME BOARD************************************/
 
-var changeBackground = function () {
-  backgroundNum = backgroundNum < 3 ? backgroundNum += 1 : 1;
-  svg.style('background-image', `url("images/background${backgroundNum}.png")`);
-};
+  const genOuterBackground = (color) => {
+    return d3.select('body')
+      .style('background-color', color);
+  };
 
-var changeDifficulty = function () {
-  console.log('difficulty');
-  difficulty = difficulty === 'easy' ? 'hard' : 'easy';
-  opposite = difficulty === 'easy' ? 'hard' : 'easy';
-  speed = difficulty === 'easy' ? 25 : 15;
-  d3.select('.difficulty').text(opposite);
-}
+  const genBoard = (width, height, color, backgroundImg) => {
+    return d3.select('.board').append('svg')
+      .attr('width', width)
+      .attr('height', height)
+      .attr("preserveAspectRatio", "xMinYMin meet")
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .style('border', '1px solid black')
+      .style('background-color', 'lightblue')
+      .style('background-image', 'url("images/background1.png")')
+      .style('background-size', 'cover')
+      .classed('svg-content-responsive', true);
+  };
 
-d3.select('.background')
-  .on('click', changeBackground);
+  //takes svg as an argument
+  const makeResponsive = (selector) => {
+    return d3.select(window)
+      .on('resize', () => {
+        let targetWidth = selector.node().getBoundingClientRect().width;
+        selector.attr('width', targetWidth);
+        selector.attr('height', targetWidth / state.aspect);
+      });
+  };
 
-d3.select('.difficulty')
-  .on('click', changeDifficulty);
+  /*****************Creating Enemies/ Player*********************************/
+  const genEnemies = (selector, data, iconWidth, iconHeight) => {
+    return selector.selectAll('circle') //TODO: is there any reason to select all 'circles' when we just change to a svg:image?
+      .data(data)
+      .enter()
+      .append('svg:image')
+      .attr('xlink:href', d => d.img)
+      .attr('x', d => d.x)
+      .attr('y', d => d.y)
+      .attr('width', iconWidth)
+      .attr('height', iconHeight);
+  };
 
-var keepScore = function () {
-  timeouts.push(setInterval(score, 500));
-};
+  // the following 3 functions are for player mousedrag movement
+  const dragstarted = function () {
+    d3.select(this).raise().classed('active', true);
+  };
 
-var score = function () {
-  currentScore++;
-  if (highScore < currentScore) {
-    highScore = currentScore;
-  }
-  d3.select('#current-score').text(currentScore);
-  d3.select('#high-score').text(highScore);
-}
+  const dragged = function () {
+    d3.select(this).attr('x', d.x = d3.event.x).attr('y', d.y = d3.event.y);
+  };
 
-var initGame = function () {
-  move();
-  keepScore();
-  collide(nodes);
-};
+  const dragended = function () {
+    d3.select(this).classed('active', false);
+  };
 
-var stop = function () {
-  timeouts.forEach(function (each) { clearTimeout(each) });
-};
+  const genPlayer = (svgElement, data, iconWidth, iconHeight) => {
+    return svgElement.append('svg:image')
+      .data(data)
+      // make this use your new helper functions
+      .attr('xlink:href', 'images/pig.png')
+      .attr('width', iconWidth)
+      .attr('height', iconHeight)
+      .attr('x', d => d.x)
+      .attr('y', d => d.y);
+  };
 
-d3.select('.start')
-  .on('click', function () {
-    if (status === 'stop') {
-      status = 'start';
-      initGame();
+  const actionizePlayer = (playerSelector, startFn, dragFn, endFn) => {
+    return playerSelector.call(
+      d3.drag()
+      .on('start', startFn)
+      .on('drag', dragFn)
+      .on('end', endFn));
+  };
+
+  /*****************************ENEMY MOVEMENT************************************/
+
+  const updateData = (data, state) => {
+    return data.map(e => {
+      let node = {};
+      if (e.x > state.width || e.x < 0) {
+        node.xD *= -1;
+      }
+      node.x += e.step * node.xD;
+      if (e.y > state.height || e.y < 0) {
+        node.yD *= -1;
+      }
+      node.y += e.step * node.yD;
+      node.step = window.state.enemyStepSize; // set step size back to default
+      node.img = e.img;
+      return node;
+    });
+  };
+
+  // used to get left/right/top/bottom limits of player/enemy objects
+  const getCorners = selector => {
+    let BBox = selector.node().getBBox();
+    let left = BBox.x;
+    let right = BBox.x + BBox.width;
+    let top = BBox.y;
+    let bottom = BBox.y + BBox.height;
+    let collided = false; //FIXME: put this where it makes sense
+    return [left, right, top, bottom];
+  };
+
+  const collide = data => {
+    let [pLeft, pRight, pTop, pBottom] = getCorners(player);
+
+
+    return data.map(function (enemy) {
+      let enemyLeft = enemy.x - 7;
+      let enemyRight = enemy.x + 25;
+      let enemyTop = enemy.y - 7;
+      let enemyBottom = enemy.y + 25;
+      let horiCollision = playerLeft < enemyRight && playerRight > enemyLeft;
+      let verCollision = playerTop < enemyBottom && playerBottom > enemyTop;
+
+      if (horiCollision && verCollision) {
+        enemy.xD *= -1; //causes the enemy to turn on collision with player
+        enemy.yD *= -1;
+        enemy.step += 25;
+        update(nodes);
+        collisions++;
+        collided = true;
+        d3.select('#collision-num').text(collisions);
+        d3.select('body')
+          .style('background-color', 'red');
+        currentScore = 0; // TODO: is there better way to reset the score?
+        timeouts.push(setTimeout(function () {
+          d3.select('body')
+            .style('background-color', '#9CFFFA');
+        }, 10));
+      }
+    });
+
+    if (collided) {
+      timeouts.push(setTimeout(collide.bind(null, nodes), 4 * speed));
     } else {
-      status = 'stop';
-      stop();
+      timeouts.push(setTimeout(collide.bind(null, nodes), speed));
     }
-    d3.select(this).text(status === 'start' ? 'stop' : 'start');
-  });
+  };
+
+  const move = function (nodes) {
+    updateData(nodes, state);
+    state.enemies.data(nodes)
+      .attr('x', function (d) {
+        return d.x;
+      })
+      .attr('y', function (d) {
+        return d.y;
+      });
+    timeouts.push(setTimeout(move, speed));
+  };
+
+  /*****************************GAME MECHANICS************************************/
+
+  const changeBackground = () => {
+    backgroundNum = backgroundNum < 3 ? backgroundNum += 1 : 1;
+    state.board.style('background-image', `url("images/background${backgroundNum}.png")`);
+  };
+
+  const changeDifficulty = () => {
+    difficulty = difficulty === 'easy' ? 'hard' : 'easy';
+    opposite = difficulty === 'easy' ? 'hard' : 'easy';
+    speed = difficulty === 'easy' ? 25 : 15;
+    d3.select('.difficulty').text(opposite);
+  };
+
+  const keepScore = function () {
+    timeouts.push(setInterval(score, 500));
+  };
+
+  const score = function () {
+    currentScore++;
+    if (highScore < currentScore) {
+      highScore = currentScore;
+    }
+    d3.select('#current-score').text(currentScore);
+    d3.select('#high-score').text(highScore);
+  };
+
+  const initGame = function () {
+    // generate all the data needed
+    state.enemyData = createNodes(state.numOfEnemies, state.width, state.height, state.images, state.stepSize);
+    state.playerData = createANode(state.width, state.height, state.images, state.stepSize);
+
+    // generate all d3 selected elements
+    genOuterBackground('#9CFFFA');
+    state.board = genBoard(state.width, state.height, '#9CFFFA', 'images/background1.png'); //FIXME: don't hard code these arguments
+    state.enemies = genEnemies(state.board, state.enemyData, state.iconWidth, state.iconHeight);
+    // start all in-game timeouts/intervals
+    move(state.enemies);
+    keepScore();
+    collide(nodes);
+
+    d3.select('.background')
+      .on('click', changeBackground);
+
+    d3.select('.difficulty')
+      .on('click', changeDifficulty);
+
+    d3.select('.start')
+      .on('click', function () {
+        if (status === 'stop') {
+          status = 'start';
+          initGame();
+        } else {
+          status = 'stop';
+          stop();
+        }
+        d3.select(this).text(status === 'start' ? 'stop' : 'start');
+      });
+  };
+
+  var stop = function () {
+    timeouts.forEach(function (each) { clearTimeout(each); });
+  };
+
+  initGame();
+
+})();
